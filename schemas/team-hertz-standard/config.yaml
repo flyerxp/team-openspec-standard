@@ -1,0 +1,76 @@
+schema: team-hertz-standard
+framework: Hertz-Go Web Service
+language: zh-CN
+strict: true
+description: 团队 Hertz Web 服务专属规范，仅对 Hertz 项目生效，不污染 Kitex RPC 项目
+# 关键：框架匹配阈值，仅识别 Hertz 项目
+match_rule:
+  framework_keywords:
+    - hz_gen
+    - hertz
+    - router
+    - handler
+  exclude_framework:
+    - kitex
+    - kitex_gen
+    - idl
+
+# 全局继承公共能力
+extends: []
+
+# 全局强制校验规则
+rules:
+  # 语言强制规则：全局中文（与Kitex统一）
+  language:
+    all_spec_must_chinese: true
+    all_comment_must_chinese: true
+    no_pinyin: true
+    no_english_only_doc: true
+    no_mix_language: true
+
+  # Web分层依赖强制校验（Hertz专属，与RPC分层隔离）
+  layer:
+    allow_deps:
+      - Controller -> Service
+      - Service -> Logic
+      - Service -> DAL
+      - Service -> Convert
+      - Logic -> DAL(read only)
+      - Convert -> Logic
+    forbid_deps:
+      - Logic 依赖 Service、Controller、Convert
+      - Controller 直接调用 DAL、Logic
+      - Convert 存在业务逻辑
+      - 跨层非法调用
+
+  # 目录结构强制规范（Hertz Web专属）
+  dir_layout:
+    standard: |
+      biz/controller 接口控制器层
+      biz/service 业务服务层
+      biz/logic 通用复用逻辑层
+      biz/dal/{db_name}/gorml 分库数据层
+      biz/dal/{db_name}/gorml/where 链式查询构造器
+      biz/dal/{db_name}/redis 缓存层
+      biz/convert 模型转换层
+      conf 配置层
+      router 路由注册层
+      hz_gen 自动生成代码(只读)
+
+  # Golang 全局通用编码规范（Kitex、Hertz完全统一）
+  coding:
+    struct_full_init: true
+    auto_type_infer: true
+    no_var_shadow: true
+    infinite_loop_for_true: true
+    raw_string_json: true
+    no_global_state_main: true
+    lint_nolint_format: true
+    comment_double_slash: true
+
+  # 代码生成规范（Hertz专属）
+  generate:
+    web_controller_template: true
+    repo_no_singleton: true
+    where_chain_mode: true
+    dal_db_split_dir: true

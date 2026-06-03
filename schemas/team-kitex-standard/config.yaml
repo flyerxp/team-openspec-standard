@@ -1,0 +1,74 @@
+schema: team-kitex-standard
+framework: Kitex-Go MicroService
+language: zh-CN
+strict: true
+description: 团队 Kitex RPC 微服务专属规范，仅对 Kitex 项目生效，不影响 Hertz Web 项目
+# 关键：框架匹配阈值，仅识别 Kitex 项目
+match_rule:
+  framework_keywords:
+    - kitex_gen
+    - kitex.yaml
+    - handler.go
+    - idl
+  exclude_framework:
+    - hertz
+    - hz_gen
+
+# 全局继承公共能力
+extends: []
+
+# 全局强制校验规则
+rules:
+  # 语言强制规则：全局中文
+  language:
+    all_spec_must_chinese: true
+    all_comment_must_chinese: true
+    no_pinyin: true
+    no_english_only_doc: true
+    no_mix_language: true
+
+  # 分层依赖强制校验（红线）- 仅Kitex RPC架构
+  layer:
+    allow_deps:
+      - Handler -> Service
+      - Service -> Logic
+      - Service -> DAL
+      - Service -> Convert
+      - Logic -> DAL(read only)
+      - Convert -> Logic
+    forbid_deps:
+      - Logic 依赖 Service、Handler、Convert
+      - Handler 直接调用 DAL、Logic
+      - Convert 存在业务逻辑
+      - 跨层非法调用
+
+  # 目录结构强制规范（Kitex专属）
+  dir_layout:
+    standard: |
+      biz/service 业务服务层
+      biz/logic 通用复用逻辑层
+      biz/dal/{db_name}/gorml 分库数据层
+      biz/dal/{db_name}/gorml/where 链式查询构造器
+      biz/dal/{db_name}/redis 缓存层
+      biz/convert 模型转换层
+      conf 配置层
+      idl 接口定义层
+      kitex_gen 自动生成代码(只读)
+
+  # Golang 全局通用编码规范（Kitex、Hertz通用）
+  coding:
+    struct_full_init: true
+    auto_type_infer: true
+    no_var_shadow: true
+    infinite_loop_for_true: true
+    raw_string_json: true
+    no_global_state_main: true
+    lint_nolint_format: true
+    comment_double_slash: true
+
+  # 代码生成规范（Kitex专属）
+  generate:
+    service_struct_template: true
+    repo_no_singleton: true
+    where_chain_mode: true
+    dal_db_split_dir: true

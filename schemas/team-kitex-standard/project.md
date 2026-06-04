@@ -38,7 +38,7 @@
 
 - `biz/logic`：全局无状态通用复用逻辑、工具、缓存规则
 
-- `biz/dal`：数据访问层，严格按 `gorml/{db_name}/where` 分库管理
+- `biz/dal`：数据访问层，严格按 `gormL/{db_name}/where` 分库管理
 
 - `biz/convert`：模型双向转换层，仅做字段映射无业务逻辑
 

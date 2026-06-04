@@ -27,7 +27,7 @@ Handler → Service → Logic / DAL / Convert
 
 4. DAL 数据访问层
 - 全局多库隔离：按数据库名称分目录
-- 每个数据库独立 gorml、where、redis
+- 每个数据库独立 gormL、where、redis
 - Repo 无状态，用完即释放
 - where 提供仿 Ent 链式类型安全查询
 
@@ -43,7 +43,7 @@ Handler → Service → Logic / DAL / Convert
 │   ├── logic/           # 公共复用逻辑 & 通用工具
 │   ├── dal/             # 数据访问层
 │   │   ├── {db_name}/   # 按【数据库实例名】分目录（多库隔离）
-│   │   │   ├── gorml/   # 当前库 MySQL ORM 数据访问
+│   │   │   ├── gormL/   # 当前库 MySQL ORM 数据访问
 │   │   │   │   └── where/ # 类型安全链式查询构造器
 │   │   │   └── redis/   # 当前库 Redis 缓存访问
 │   ├── convert/         # 数据模型转换器

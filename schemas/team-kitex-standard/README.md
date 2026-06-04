@@ -42,7 +42,7 @@ extends: team-kitex-standard
 
 ### 仅 Kitex RPC 专属（Hertz 不生效）
 - Handler/Service/Logic/DAL/Convert 分层架构
-- 分库DAL目录结构 `dal/gorml/{db_name}/where`
+- 分库DAL目录结构 `dal/gormL/{db_name}/where`
 - RPC Service 结构体模板
 - RPC专属依赖校验规则
 

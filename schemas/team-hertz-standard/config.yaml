@@ -49,8 +49,8 @@ rules:
       biz/controller 接口控制器层
       biz/service 业务服务层
       biz/logic 通用复用逻辑层
-      biz/dal/gorml/{db_name} 分库数据层
-      biz/dal/gorml/{db_name}/where 链式查询构造器
+      biz/dal/gormL/{db_name} 分库数据层
+      biz/dal/gormL/{db_name}/where 链式查询构造器
       biz/dal/{db_name}/redis 缓存层
       biz/convert 模型转换层
       conf 配置层

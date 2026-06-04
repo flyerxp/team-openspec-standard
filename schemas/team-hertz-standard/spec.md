@@ -27,11 +27,20 @@ Controller → Service → Logic / DAL / Convert
 - 与 Kitex RPC 项目 Logic 规范完全一致
 
 4. DAL 数据访问层
-- 全局多库隔离：按数据库名称分目录
-- 每个数据库独立 gorml、where、redis
-- Repo 无状态，用完即释放
-- where 提供仿 Ent 链式类型安全查询
-- 与 Kitex RPC 项目 DAL 目录、编码规范完全统一
+1. 目录结构
+    - 严格按照数据库实例分目录：biz/dal/gormL/{db_name}/
+    - 每个库独立包含：gormL、gormL/where
+2. 文件命名强制规则
+    - 表模型文件：{表名}.go
+    - 查询构造器文件：where/{表名}.go
+    - 仓库文件：{表名}.go（与模型文件对应）
+3. 代码约束
+    - 模型结构体必须定义 TableName 方法
+    - 查询条件必须收敛到 where 构造器，禁止在 repo 拼接 SQL
+    - repo 无状态，不使用全局单例
+    - 每个 repo 必须实现 GetWhere() 方法，返回对应 where 实例
+    - 链式查询风格完全仿照 Ent 框架，类型安全、无裸 SQL
+    - 分页统一使用 limit+1 模式，统一返回分页结构体
 
 5. Convert 模型转换层
 - DB结构体 ↔ Web请求/响应结构体 双向转换
@@ -46,10 +55,10 @@ Controller → Service → Logic / DAL / Convert
 │   ├── service/         # 业务服务层
 │   ├── logic/           # 公共复用逻辑 & 通用工具
 │   ├── dal/             # 数据访问层
-│   │   ├── {db_name}/   # 按【数据库实例名】分目录（多库隔离）
-│   │   │   ├── gorml/   # 当前库 MySQL ORM 数据访问
-│   │   │   │   └── where/ # 类型安全链式查询构造器
-│   │   │   └── redis/   # 当前库 Redis 缓存访问
+│   │   ├── gormL/      # MySQL ORM 数据访问
+│   │   │   └── {db_name}/   # 按【数据库实例名】分目录（多库隔离）
+│   │   │      └── where/ # 类型安全链式查询构造器
+│   ├── redis/   # 当前库 Redis 缓存访问
 │   ├── convert/         # 数据模型转换器
 │   └── test/            # 单元测试
 ├── conf/                # 配置层

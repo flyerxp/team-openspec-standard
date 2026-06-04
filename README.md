@@ -61,7 +61,7 @@ schemas/
 
 - Lint 告警统一 `// NOLINT` 规范抑制
 
-- DAL 层统一分库架构：`dal/gorml/{db_name}/where`
+- DAL 层统一分库架构：`dal/gormL/{db_name}/where`
 
 - 统一链式查询构造器、分页逻辑、数据层编码规范
 

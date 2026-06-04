@@ -30,8 +30,8 @@
 
 ### DAL（数据访问层）
 - 严格按数据库名称分目录：biz/dal/{db_name}/
-- 每个库独立：gorml / gorml/where / redis
-- gorml：模型、Repo、CURD
+- 每个库独立：gormL / gormL/where / redis
+- gormL：模型、Repo、CURD
 - where：仿 Ent 链式查询构造器、基类继承、私有方法封装
 - Repo 无状态，每次 new 新对象，不使用单例
 
@@ -40,8 +40,8 @@
 - 禁止业务逻辑、禁止判断、禁止流程编排
 
 # 3. 目录结构强制固定
-biz/dal/gorml/{db_name}
-biz/dal/gorml/{db_name}/where
+biz/dal/gormL/{db_name}
+biz/dal/gormL/{db_name}/where
 biz/dal/{db_name}/redis
 
 # 4. Golang 编码强制规范（MUST）

@@ -207,7 +207,9 @@ func GetNewNewsRepo() *NewsRepo {return &NewsRepo{}}
 func (n *NewsRepo) GetWhere() *where.NewsListWhere {
 	return &where.NewsListWhere{BaseWhere: &gormLib.BaseWhere{}}
 }
-
+func (r *NewsRepo) getDB(ctx context.Context) *gorm.DB {
+	return gormL.GetDB(ctx).Model(&NewsInfo{})
+}
 // NewsInfoListColsPage 分页结构体
 type NewsInfoListColsPage struct {
 	List []NewsListCols
@@ -225,7 +227,7 @@ func (n *NewsInfoListColsPage) DoPage() *NewsInfoListColsPage {
 func (r *NewsRepo) GetList(ctx context.Context, w *where.NewsListWhere, sort string, page int, limit int) (*NewsInfoListColsPage, error) {
 	var list []NewsListCols
 	pageObj := NewsInfoListColsPage{List: list, Page: widget.Page{Size: limit,Page: page}}
-	db := gormL.GetDB(ctx).Model(&NewsInfo{}).Select("id","title","description","create_time","update_time","subtitle","time_line","img","category_id","status")
+	db := r.GetDB(ctx).Select("id","title","description","create_time","update_time","subtitle","time_line","img","category_id","status")
 	if w != nil {
 		db = w.Build(db)
 	}

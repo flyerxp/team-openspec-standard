@@ -1,72 +1,66 @@
-schema: team-kitex-standard
-framework: Kitex-Go MicroService
-language: zh-CN
-strict: true
-description: 团队 Kitex RPC 微服务专属规范，仅对 Kitex 项目生效，不影响 Hertz Web 项目
-# 关键：框架匹配阈值，仅识别 Kitex 项目
-match_rule:
-  framework_keywords:
-    - kitex_gen
-    - kitex.yaml
-    - handler.go
-    - idl
-  exclude_framework:
-    - hertz
-    - hz_gen
+# OpenSpec 项目配置文件
 
-# 全局继承公共能力
-extends: []
+# 项目基本信息
+project:
+  name: 定时+消息消费纯业务服务
+  version: 1.0.0
+  description: 无RPC的纯业务型服务，包含biz核心层、定时任务和消息消费模块，biz/dal对齐Kitex标准
 
-# 全局强制校验规则
-rules:
-  # 语言强制规则：全局中文
-  language:
-    all_spec_must_chinese: true
-    all_comment_must_chinese: true
-    no_pinyin: true
-    no_english_only_doc: true
-    no_mix_language: true
+# 规范Schema配置
+schema:
+  # 引用团队标准Kitex schema
+  extends: team-kitex-standard
+  # 扩展规则，适配我们的无RPC项目
+  rules:
+    - name: no-rpc-layer
+      description: 项目无RPC层，禁用Handler/Service相关规则
+      level: error
+      check:
+        - 禁止创建handler、service目录
+        - 禁止RPC相关的代码生成
+    - name: biz-dal-alignment
+      description: biz/dal层必须完全对齐Kitex RPC标准
+      level: error
+      check:
+        - 禁止修改biz/dal的目录结构
+        - 必须遵循Kitex的dal编码规范
 
-  # 分层依赖强制校验（红线）- 仅Kitex RPC架构
-  layer:
-    allow_deps:
-      - Service -> Logic
-      - Service -> DAL
-      - Service -> Convert
-      - Logic -> DAL(read only)
-      - Logic -> Convert
-    forbid_deps:
-      - Logic 依赖 Service
-      - Convert 存在业务逻辑
-      - 跨层非法调用
+# 工作流配置
+workflow:
+  auto_validate: true
+  require_review: true
+  archive_on_complete: true
+  templates:
+    feature: templates/feature-proposal.md
+    bugfix: templates/bugfix-proposal.md
+    refactor: templates/refactor-proposal.md
 
-  # 目录结构强制规范（Kitex专属）
-  dir_layout:
-    standard: |
-      biz/service 业务服务层
-      biz/logic 通用复用逻辑层
-      biz/dal/gormL/{db_name} 分库数据层
-      biz/dal/gormL/{db_name}/where 链式查询构造器
-      biz/dal/redis/{db_name} 缓存层
-      biz/convert 模型转换层
-      conf 配置层
-      idl 接口定义层
-      kitex_gen 自动生成代码(只读)
+# 工具集成配置
+tools:
+  cursor:
+    enabled: true
+  claude_code:
+    enabled: true
+  openspec_cli:
+    enabled: true
+    commands:
+      - validate
+      - apply
+      - archive
 
-  # Golang 全局通用编码规范（Kitex、Hertz通用）
-  coding:
-    struct_full_init: true
-    auto_type_infer: true
-    no_var_shadow: true
-    infinite_loop_for_true: true
-    raw_string_json: true
-    no_global_state_main: true
-    lint_nolint_format: true
-    comment_double_slash: true
-
-  # 代码生成规范（Kitex专属）
-  generate:
-    service_struct_template: true
-    repo_no_singleton: true
-    where_chain_mode: true
-    dal_db_split_dir: true
+# 全局上下文
+context:
+  language: zh-CN
+  tech_stack:
+    - Golang
+    - GORM
+    - MySQL
+    - Redis
+    - 定时任务
+    - MQ消息队列
+  architecture:
+    - 无RPC服务
+    - biz核心业务层
+    - crontab定时任务模块
+    - consumer消息消费模块
+  dal_standard: kitex-rpc-standard

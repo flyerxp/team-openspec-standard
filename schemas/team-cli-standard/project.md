@@ -240,6 +240,96 @@ func (r *NewsRepo) GetList(ctx context.Context, w *where.NewsListWhere, sort str
 
 \- 所有批量查询、遍历查询必须遵守该规范
 
+### 5\.3 统一分页规范
+
+\- 统一分页结构体，自动计算 `HasMore`
+
+\- 统一 `limit+1` 查询方式，精准判断是否有下一页
+
+\- 统一 `DoPage()`自动裁剪列表数据
+
+\- 所有批量查询、遍历查询必须遵守该规范
+
+### 5\.4 gormL 数据库初始化规范（init\.go）
+
+biz/dal/gormL/init\.go 为项目全局数据库入口文件，负责多数据库实例初始化、单例管理、上下文绑定，是所有DAL数据查询的统一入口，全局唯一，禁止分散初始化数据库连接。
+
+**核心约束**：
+
+1\. 支持多数据库并行初始化，统一聚合到 DBClient 结构体管理
+
+2\. 全局单次初始化，避免重复创建数据库连接
+
+3\. 所有DB操作必须绑定上下文 ctx，禁止裸DB实例操作
+
+4\. 内部兜底自动初始化，无需业务层手动调用 Init 方法
+
+5\. 按业务库拆分独立获取方法，职责隔离、清晰可控
+
+**标准 init\.go 完整示例**：
+
+```go
+package gormL
+
+import (
+	"context"
+	"github.com/flyerxp/lib/v2/logger"
+	"github.com/flyerxp/lib/v2/middleware/gormL"
+	"gorm.io/gorm"
+)
+
+// DBClient 定义GORM数据库连接聚合实例
+type DBClient struct {
+	Shop   *gorm.DB
+	Report *gorm.DB
+}
+
+var dbClient *DBClient
+
+// Init 初始化GORM多数据库连接（全局仅执行一次）
+func Init(ctx context.Context) error {
+	if dbClient != nil {
+		return nil
+	}
+	var shop *gorm.DB
+	var report *gorm.DB
+	var err error
+	if shop, err = gormL.GetEngine(ctx, "readshop"); err != nil {
+		return err
+	}
+
+	report, err = gormL.GetEngine(ctx, "report")
+	if err != nil {
+		return err
+	}
+	dbClient = &DBClient{Shop: shop, Report: report}
+	return nil
+}
+
+// GetShopDB 获取已注入context的Shop库DB实例
+func GetShopDB(ctx context.Context) *gorm.DB {
+	if dbClient == nil {
+		initCtx := logger.GetContext(context.Background(), "gormInit")
+		if err := Init(initCtx); err != nil {
+			panic(err)
+		}
+	}
+	return dbClient.Shop.WithContext(ctx)
+}
+
+// GetReportDB 获取已注入context的Report库DB实例
+func GetReportDB(ctx context.Context) *gorm.DB {
+	if dbClient == nil {
+		initCtx := logger.GetContext(context.Background(), "gormInit")
+		if err := Init(initCtx); err != nil {
+			panic(err)
+		}
+	}
+	return dbClient.Report.WithContext(ctx)
+}
+
+```
+
 ## 六、分层依赖白名单（强制）
 
 crontab/cmd    → crontab/service

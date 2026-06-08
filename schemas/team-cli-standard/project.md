@@ -212,129 +212,100 @@ func (w \*DemoListWhere) TitleLike(title string) \*DemoListWhere {
 
 #### 6.2.1 标准 Repo + 分页代码示例
 
-
-
 ```
 package ch123
 
 import (
-
-&#x20;       "context"
-
-&#x20;       "github.com/flyerxp/lib/v2/middleware/gormL"
-
-&#x20;       "github.com/flyerxp/content.Demo.rpc/v2/biz/dal/gormL/ch123/where"
-
-&#x20;       "github.com/flyerxp/globalStruct/widget"
-
-&#x20;       "gorm.io/gorm"
-
+	"context"
+	"github.com/flyerxp/lib/v2/middleware/gormL"
+	"github.com/flyerxp/content.Demo.rpc/v2/biz/dal/gormL/ch123/where"
+	"github.com/flyerxp/globalStruct/widget"
+	"gorm.io/gorm"
 )
 
 // DemoInfo 新闻资讯 GORM 模型
-
 type DemoInfo struct {
-
-&#x20;       Id           int       \`gorm:"column:id;primaryKey;autoIncrement" json:"id,omitempty"\`
-
-&#x20;       Title        string    \`gorm:"column:title;size:255" json:"title,omitempty"\`
-
-&#x20;       CategoryId   int       \`gorm:"column:category\_id" json:"category\_id,omitempty"\`
-
+	Id           int       `gorm:"column:id;primaryKey;autoIncrement" json:"id,omitempty"`
+	Title        string    `gorm:"column:title;size:255" json:"title,omitempty"`
+	CategoryId   int       `gorm:"column:category_id" json:"category_id,omitempty"`
 }
-
-func (DemoInfo) TableName() string {return "Demo\_info"}
+func (DemoInfo) TableName() string {return "Demo_info"}
 
 // DemoRepo 数据仓储
-
 type DemoRepo struct{}
-
-// NewDemoRepo 新建实例
-
-func NewDemoRepo() \*DemoRepo {return \&DemoRepo{}}
-
-// GetWhere 强制方法
-
-func (n \*DemoRepo) GetWhere() \*where.DemoListWhere {
-
-&#x20;       return \&where.DemoListWhere{BaseWhere: \&gormL.BaseWhere{}}
-
+func NewDemoRepo() *DemoRepo {return &DemoRepo{}}
+func (n *DemoRepo) GetWhere() *where.DemoListWhere {
+	return &where.DemoListWhere{BaseWhere: &gormL.BaseWhere{}}
+}
+func (r *DemoRepo) GetGormModel(ctx context.Context) *gorm.DB {
+	return gormL.GetDB(ctx).Model(&DemoInfo{})
 }
 
-func (r \*DemoRepo) getDB(ctx context.Context) \*gorm.DB {
-
-&#x20;       return gormL.GetDB(ctx).Model(\&DemoInfo{})
-
-}
-
-// 分页结构体
-
+// 统一分页结构体
 type DemoInfoListColsPage struct {
-
-&#x20;       List \[]DemoListCols
-
-&#x20;       Page widget.Page
-
+	List []DemoListCols
+	Page widget.Page
+}
+func (n *DemoInfoListColsPage) DoPage() *DemoInfoListColsPage {
+	n.Page.HasMore = len(n.List) > n.Page.Size
+	if n.Page.HasMore {
+		n.List = n.List[:n.Page.Size]
+	}
+	return n
 }
 
-func (n \*DemoInfoListColsPage) DoPage() \*DemoInfoListColsPage {
+// 分页查询方法
+func (r *DemoRepo) GetList(ctx context.Context, w *where.DemoListWhere, sort string, page int, limit int) (*DemoInfoListColsPage, error) {
+	var list []DemoListCols
+	pageObj := DemoInfoListColsPage{List: list, Page: widget.Page{Size: limit, Page: page}}
+	
+	db := r.GetGormModel(ctx).Select("id", "title", "category_id")
+	if w != nil {
+		db = w.Build(db)
+	}
 
-&#x20;       n.Page.HasMore = len(n.List) > n.Page.Size
+	switch sort {
+	case "web":
+		db = db.Order("is_top desc, sort_id desc, update_time desc")
+	default:
+		db = db.Order("id desc")
+	}
 
-&#x20;       if n.Page.HasMore {
+	offset := (page - 1) * limit
+	db = db.Offset(offset).Limit(limit + 1)
 
-&#x20;               n.List = n.List\[:n.Page.Size]
+	if err := db.Find(&list).Error; err != nil {
+		return nil, err
+	}
 
-&#x20;       }
-
-&#x20;       return n
-
+	pageObj.List = list
+	return pageObj.DoPage(), nil
 }
-
-// GetList 分页查询
-
-func (r \*DemoRepo) GetList(ctx context.Context, w \*where.DemoListWhere, sort string, page int, limit int) (\*DemoInfoListColsPage, error) {
-
-&#x20;       var list \[]DemoListCols
-
-&#x20;       pageObj := DemoInfoListColsPage{List: list, Page: widget.Page{Size: limit,Page: page}}
-
-&#x20;       db := r.getDB(ctx).Select("id","title","category\_id")
-
-&#x20;       if w != nil {
-
-&#x20;               db = w.Build(db)
-
-&#x20;       }
-
-&#x20;       switch sort {
-
-&#x20;       case "web":
-
-&#x20;               db = db.Order("is\_top desc, sort\_id desc, update\_time desc")
-
-&#x20;       default:
-
-&#x20;               db = db.Order("id desc")
-
-&#x20;       }
-
-&#x20;       offset := (page - 1) \* limit
-
-&#x20;       db = db.Offset(offset).Limit(limit + 1)
-
-&#x20;       if err := db.Find(\&list).Error; err != nil {
-
-&#x20;               return nil, err
-
-&#x20;       }
-
-&#x20;       pageObj.List = list
-
-&#x20;       return pageObj.DoPage(), nil
-
+func (r *DemoRepo) UpdatePathById(ctx context.Context, id int, path string, rootId int, tx *gorm.DB) error {
+	db := tx
+	if db == nil {
+		// 无事务时，使用默认DB实例，内部已完成表模型绑定
+		db = r.GetGormModel(ctx)
+	} else {
+		// 【强制规范】有事务时，必须对事务实例显式绑定当前表模型，避免表名/字段映射异常
+		db = db.Model(&DemoInfo{})
+	}
+	return db.Where("id = ?", id).Updates(map[string]interface{}{
+		"path":    path,
+		"root_id": rootId,
+	}).Error
 }
 ```
+
+#### 6.2.2 事务参数处理强制规范
+
+当业务需要跨 Repo 执行事务操作，向 Repo 方法传递外部事务实例时，必须严格遵循以下规则：
+
+1. **强制绑定表模型**：外部传入的事务`*gorm.DB`实例默认未绑定当前 Repo 的表模型，必须在 Repo 方法内部，对该事务实例显式执行`Model(&当前表模型{})`，完成表模型绑定。
+
+2. **统一 DB 实例行为**：无论使用默认的`GetGormModel`获取的常规 DB 实例，还是外部传入的事务实例，最终执行 DB 操作的实例都必须已完成表模型绑定，确保两者行为完全一致。
+
+3. **规避潜在风险**：该规范可有效避免因事务实例未指定表模型导致的表名错误、字段映射异常、GORM 钩子不生效、软删除逻辑失效等隐性问题。
 
 ### 6.3 统一分页规范
 

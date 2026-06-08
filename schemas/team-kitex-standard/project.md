@@ -310,8 +310,30 @@ func (r *DemoRepo) GetList(ctx context.Context, w *where.DemoListWhere, sort str
 	pageObj.List = list
 	return pageObj.DoPage(), nil
 }
-
+func (r *DemoRepo) UpdatePathById(ctx context.Context, id int, path string, rootId int, tx *gorm.DB) error {
+	db := tx
+	if db == nil {
+		// 无事务时，使用默认DB实例，内部已完成表模型绑定
+		db = r.GetGormModel(ctx)
+	} else {
+		// 【强制规范】有事务时，必须对事务实例显式绑定当前表模型，避免表名/字段映射异常
+		db = db.Model(&DemoInfo{})
+	}
+	return db.Where("id = ?", id).Updates(map[string]interface{}{
+		"path":    path,
+		"root_id": rootId,
+	}).Error
+}
 ```
+
+**5\.2\.2 事务参数处理强制规范**
+当业务需要跨 Repo 执行事务操作，向 Repo 方法传递外部事务实例时，必须严格遵循以下规则：
+
+1. **强制绑定表模型**：外部传入的事务`*gorm.DB`实例默认未绑定当前 Repo 的表模型，必须在 Repo 方法内部，对该事务实例显式执行`Model(&当前表模型{})`，完成表模型绑定。
+
+2. **统一 DB 实例行为**：无论使用默认的`GetGormModel`获取的常规 DB 实例，还是外部传入的事务实例，最终执行 DB 操作的实例都必须已完成表模型绑定，确保两者行为完全一致。
+
+3. **规避潜在风险**：该规范可有效避免因事务实例未指定表模型导致的表名错误、字段映射异常、GORM 钩子不生效、软删除逻辑失效等隐性问题。
 
 ### 5\.3 全局统一分页规范（RPC 通用）
 

@@ -1,66 +1,92 @@
-# OpenSpec 项目配置文件
-
-# 项目基本信息
 project:
-  name: 定时+消息消费纯业务服务
-  version: 1.0.0
-  description: 无RPC的纯业务型服务，包含biz核心层、定时任务和消息消费模块，biz/dal对齐Kitex标准
+  name: "async-task-service"
+  display_name: "Golang异步任务服务"
+  service_type: ["crontab", "consumer"]
+  description: "基于Cobra+GORM+Redis+MQ构建的定时任务、消息消费异步后台服务"
+  tech_stack: ["Golang", "GORM", "Redis", "Cobra", "MQ"]
+  spec_version: "v1.0"
+  align_spec: "Kitex_RPC_Standard"
+  language: "zh-CN"
+  comment_rule: "single_line"
+  string_rule: "backtick"
+  loop_rule: "infinite_for"
+  struct_init_rule: "aggregate"
+  variable_rule: "auto_infer"
+  shadow_variable: "disable"
 
-# 规范Schema配置
-schema:
-  # 引用团队标准Kitex schema
-  extends: team-kitex-standard
-  # 扩展规则，适配我们的无RPC项目
-  rules:
-    - name: no-rpc-layer
-      description: 项目无RPC层，禁用Handler/Service相关规则
-      level: error
-      check:
-        - 禁止创建handler、service目录
-        - 禁止RPC相关的代码生成
-    - name: biz-dal-alignment
-      description: biz/dal层必须完全对齐Kitex RPC标准
-      level: error
-      check:
-        - 禁止修改biz/dal的目录结构
-        - 必须遵循Kitex的dal编码规范
+# 工程目录固定配置（强制对齐project.md规范）
+dir_struct:
+  biz:
+    - "biz/logic"
+    - "biz/convert"
+    - "biz/dal/gormL"
+    - "biz/dal/redis"
+  crontab:
+    - "crontab/cmd"
+    - "crontab/service"
+    - "crontab/conf"
+    - "crontab/shell"
+  consumer:
+    - "consumer/cmd"
+    - "consumer/service"
+    - "consumer/conf"
+    - "consumer/shell"
 
-# 工作流配置
-workflow:
-  auto_validate: true
-  require_review: true
-  archive_on_complete: true
-  templates:
-    feature: templates/feature-proposal.md
-    bugfix: templates/bugfix-proposal.md
-    refactor: templates/refactor-proposal.md
+# DAL层全局规范配置
+dal:
+  # 数据库多库隔离配置
+  db_mode: "multi_db_isolate"
+  init_file: "biz/dal/gormL/init.go"
+  # 查询构造器规则
+  where:
+    enable: true
+    base_struct: "gormL.BaseWhere"
+    file_naming: "table_name_lower"
+    struct_naming: "table_camel+ListWhere"
+    private_method: true
+    raw_sql: false
+  # Repo仓储规则
+  repo:
+    singleton: false
+    must_get_where: true
+    new_instance: true
+  # 分页全局统一规则
+  page:
+    limit_offset_mode: true
+    limit_plus_one: true
+    auto_has_more: true
+    auto_clip_list: true
+    page_struct: "widget.Page"
 
-# 工具集成配置
-tools:
-  cursor:
-    enabled: true
-  claude_code:
-    enabled: true
-  openspec_cli:
-    enabled: true
-    commands:
-      - validate
-      - apply
-      - archive
+# 分层依赖白名单（强制）
+deps_whitelist:
+  crontab/cmd: ["crontab/service"]
+ consumer/cmd: ["consumer/service"]
+  crontab/service: ["biz/logic", "biz/dal", "biz/convert"]
+ consumer/service: ["biz/logic", "biz/dal", "biz/convert"]
+  biz/logic: ["biz/dal(readonly)", "biz/convert"]
 
-# 全局上下文
-context:
-  language: zh-CN
-  tech_stack:
-    - Golang
-    - GORM
-    - MySQL
-    - Redis
-    - 定时任务
-    - MQ消息队列
-  architecture:
-    - 无RPC服务
-    - biz核心业务层
-    - crontab定时任务模块
-    - consumer消息消费模块
-  dal_standard: kitex-rpc-standard
+# 分层职责约束
+layer_constraint:
+  cmd_no_biz_logic: true
+  convert_no_logic: true
+  logic_no_upper_depend: true
+  dal_no_hard_code: true
+
+# 编码强制规则
+code_rule:
+  global_biz_var: false
+  var_shadow: false
+  lint_nolint: true
+  cobra_standard: true
+  service_cmd_match: true
+
+# 全局禁止红线
+forbidden_rule:
+  - "禁止Logic依赖上层crontab/consumer模块"
+  - "禁止cmd层编写任何业务、数据逻辑"
+  - "禁止Convert层编写业务逻辑"
+  - "禁止Repo全局单例"
+  - "禁止硬编码配置、时间、状态值"
+  - "禁止手写裸SQL"
+  - "禁止跨层、反向非法依赖"

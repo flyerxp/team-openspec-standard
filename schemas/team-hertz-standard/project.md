@@ -311,12 +311,46 @@ func (r *DemoRepo) UpdatePathById(ctx context.Context, id int, path string, root
 		"root_id": rootId,
 	}).Error
 }
-
+func (r *DemoRepo) UpdatePathByIdMust(ctx context.Context, id int, path string, rootId int, tx *gorm.DB) error {
+	db := r.GetGormModel(ctx, tx)
+	result := db.Where("id = ?", id).Updates(map[string]interface{}{
+		"path":    path,
+		"root_id": rootId,
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
 func (r *DemoRepo) Save(ctx context.Context, info *DemoInfo, tx *gorm.DB) error {
 	return r.GetGormModel(ctx, tx).Save(info).Error
 }
 ```
 
+**5\.2\.2 更新方法选型规范**
+
+针对路径更新场景，提供两种更新方法，需根据业务场景严格选型：
+
+1. **普通更新方法：****`UpdatePathById`**
+
+    - 仅返回数据库操作错误，不校验更新行数
+
+    - 适用于非核心、允许更新失败（如数据已被删除不影响业务）的普通场景
+
+2. **强制更新方法：****`UpdatePathByIdMust`**
+
+    - 除数据库操作错误外，额外校验更新行数（`RowsAffected`）
+
+    - 若未找到目标记录（更新行数为 0），直接返回 `gorm.ErrRecordNotFound` 错误
+
+    - **强制要求**：所有必须确保数据更新成功的核心场景，**必须使用此方法**
+
+        - 典型场景：消息消费场景、交易流水场景、核心业务状态更新场景
+
+        - 目的：避免因记录不存在导致的静默更新失败，保障核心数据一致性
 
 ### 5\.3 全局分页规范
 

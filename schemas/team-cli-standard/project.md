@@ -302,24 +302,48 @@ func (r *DemoRepo) UpdatePathById(ctx context.Context, id int, path string, root
 		"root_id": rootId,
 	}).Error
 }
-
+func (r *DemoRepo) UpdatePathByIdMust(ctx context.Context, id int, path string, rootId int, tx *gorm.DB) error {
+	db := r.GetGormModel(ctx, tx)
+	result := db.Where("id = ?", id).Updates(map[string]interface{}{
+		"path":    path,
+		"root_id": rootId,
+	})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
 func (r *DemoRepo) Save(ctx context.Context, info *DemoInfo, tx *gorm.DB) error {
 	return r.GetGormModel(ctx, tx).Save(info).Error
 }
 
 ```
 
-#### 6.2.2 事务参数处理强制规范
+#### 5\.2\.2 更新方法选型规范
 
-当业务需要跨 Repo 执行事务操作，向 Repo 方法传递外部事务实例时，必须严格遵循以下规则：
+针对路径更新场景，提供两种更新方法，需根据业务场景严格选型：
 
-1. **链式操作（Updates/Where 等）强制绑定表模型**：外部传入的事务`*gorm.DB`为通用实例，未绑定当前Repo表模型，执行 `Updates`、`Where`、`Select` 等链式操作时，**必须手动调用 Model\(\) 绑定当前业务表模型**，否则会出现表名识别错误、字段映射失效、软删除/钩子不生效等问题。
+1. **普通更新方法：****`UpdatePathById`**
 
-2. **结构体保存（Save）豁免绑定 Model**：使用 GORM `Save` 方法时，方法入参为完整模型结构体，GORM 可自动识别表模型，**无需手动调用 Model\(\) 绑定**，但必须严格做事务非空判断，统一事务、非事务分支代码逻辑，保持风格一致。
+    - 仅返回数据库操作错误，不校验更新行数
 
-3. **事务分支必做判空兜底**：所有含事务参数的Repo方法，必须区分「有事务」「无事务」两个分支，无事务时统一使用 `GetGormModel` 获取已绑定表模型的标准DB实例，禁止直接裸用DB。
+    - 适用于非核心、允许更新失败（如数据已被删除不影响业务）的普通场景
 
-4. **统一事务行为、杜绝隐性BUG**：所有事务操作严格区分两类写法适配规则，不混用、不省略绑定逻辑，保证所有数据库操作行为统一，规避事务场景下的数据更新异常、SQL 执行错误、事务回滚失效等隐性问题。
+2. **强制更新方法：****`UpdatePathByIdMust`**
+
+    - 除数据库操作错误外，额外校验更新行数（`RowsAffected`）
+
+    - 若未找到目标记录（更新行数为 0），直接返回 `gorm.ErrRecordNotFound` 错误
+
+    - **强制要求**：所有必须确保数据更新成功的核心场景，**必须使用此方法**
+
+        - 典型场景：消息消费场景、交易流水场景、核心业务状态更新场景
+
+        - 目的：避免因记录不存在导致的静默更新失败，保障核心数据一致性
+
 
 ### 6.3 统一分页规范
 

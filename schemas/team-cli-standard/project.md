@@ -246,8 +246,8 @@ func (r *DemoRepo) GetWhere() *where.DemoListWhere {
 	return &where.DemoListWhere{BaseWhere: &gormL.BaseWhere{}} 
 }
 
-// GetGormModel 获取绑定上下文的DB实例
-func (r *DemoRepo) GetGormModel(ctx context.Context, tx *gorm.DB) *gorm.DB {
+// getGormModel 获取绑定上下文的DB实例
+func (r *DemoRepo) getGormModel(ctx context.Context, tx *gorm.DB) *gorm.DB {
 	if tx != nil {
         // 有事务：创建新会话避免污染外部事务
         return tx.Session(&gorm.Session{}).Model(&DemoInfo{})
@@ -277,7 +277,7 @@ func (r *DemoRepo) ListPage(ctx context.Context, w *where.DemoListWhere, page, l
 		Page: widget.Page{Page: page, Size: limit},
 	}
 	// 基础查询
-	db := r.GetGormModel(ctx, nil)
+	db := r.getGormModel(ctx, nil)
 	// 拼接where条件
 	if w != nil {
 		db = w.Build(db)
@@ -296,14 +296,14 @@ func (r *DemoRepo) ListPage(ctx context.Context, w *where.DemoListWhere, page, l
 
 
 func (r *DemoRepo) UpdatePathById(ctx context.Context, id int, path string, rootId int, tx *gorm.DB) error {
-	db := r.GetGormModel(ctx, tx)
+	db := r.getGormModel(ctx, tx)
 	return db.Where("id = ?", id).Updates(map[string]interface{}{
 		"path":    path,
 		"root_id": rootId,
 	}).Error
 }
 func (r *DemoRepo) UpdatePathByIdMust(ctx context.Context, id int, path string, rootId int, tx *gorm.DB) error {
-	db := r.GetGormModel(ctx, tx)
+	db := r.getGormModel(ctx, tx)
 	result := db.Where("id = ?", id).Updates(map[string]interface{}{
 		"path":    path,
 		"root_id": rootId,
@@ -317,7 +317,7 @@ func (r *DemoRepo) UpdatePathByIdMust(ctx context.Context, id int, path string, 
 	return nil
 }
 func (r *DemoRepo) Save(ctx context.Context, info *DemoInfo, tx *gorm.DB) error {
-	return r.GetGormModel(ctx, tx).Save(info).Error
+	return r.getGormModel(ctx, tx).Save(info).Error
 }
 
 ```

@@ -333,7 +333,7 @@ func (r *DemoRepo) ListPage(ctx context.Context, w *where.DemoListWhere, page, l
 	offset := (page - 1) * limit
 	db = db.Offset(offset).Limit(limit + 1)
 	if err := db.Find(&list).Error; err != nil {
-		return nil, err
+		return pageObj, err
 	}
 	pageObj.List = list
 	return pageObj.DoPage(), nil

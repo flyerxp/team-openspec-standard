@@ -1,117 +1,134 @@
-project:
-  name: "hertz-web-manage"
+# OpenSpec 1.4.1 新版配置文件（Hertz Web服务专属）
+version: "1.0"
+no_interactive: true
+
+context:
+  # 项目基础信息
+  project: "hertz-web-manage"
   display_name: "Hertz Web后台管理服务"
   service_type: ["web"]
-  tech_stack: ["Golang", "Hertz", "Protobuf", "GORM", "Redis", "Liquid"]
-  spec_version: "v1.0"
-  language: "zh-CN"
   description: "基于Hertz+Protobuf开发的Web接口与Liquid页面渲染服务，对齐团队统一DAL分层规范"
+  tech_stack: ["Golang 1.21+", "Hertz", "Protobuf", "GORM v2", "Redis 6.0+", "Liquid"]
+  
+  # 关联代码示例文件（AI自动读取参考）
+  examples:
+    - path: "openspec/examples/where_constructor_example.go"
+      description: "Where链式查询构造器标准写法，类型安全禁止裸SQL"
+    - path: "openspec/examples/repo_page_example.go"
+      description: "Repo仓储层+统一分页完整实现，包含CRUD、更新方法选型"
+    - path: "openspec/examples/transaction_example.go"
+      description: "GORM两种事务标准写法，手动/自动事务两种模式"
+    - path: "openspec/examples/db_init_example.go"
+      description: "多数据库统一初始化init.go模板，全局唯一DB入口"
+    - path: "openspec/examples/hz_scaffold_command.txt"
+      description: "Hertz Protobuf脚手架标准生成命令模板"
+  
+  # 全局编码规范
+  code_rule:
+    comment_rule: "single_line"
+    string_backtick: true
+    infinite_for: true
+    struct_aggregate_init: true
+    auto_type_infer: true
+    forbid_var_shadow: true
+    forbid_global_biz_var: true
+    lint_nolint_allow: true
+  
+  # 工程目录结构约束
+  dir_struct:
+    root_keep:
+      - idl
+      - layout
+      - conf
+      - golang
+      - render
+    biz_path: "golang/biz"
+    biz_sub_dir:
+      - handle
+      - model
+      - router
+      - mw
+      - logic
+      - convert
+      - dal
+  # 目录专属强约束
+  dir_rule:
+    conf:
+      only_yaml: true
+      forbid_go_file: true
+    idl:
+      only_protobuf: true
+    golang/biz/router:
+      manual_edit_forbid: true
+    golang/biz/model:
+      manual_edit_forbid: true
+    # gormL 自动创建多库子目录
+    golang/biz/dal/gormL:
+      auto_create_sub_db_dir: true
+    # 所有库下的 where 目录约束：仅允许Go文件、禁止其他文件
+    golang/biz/dal/gormL/*/where:
+      only_go_file: true
+      forbid_other_file: true
+    render:
+      only_html_asset: true
+      forbid_go_file: true
+      layer_limit: 2
+      forbid_flat_root_html: true
+      forbid_multi_layer_nest: true
+  
+  # 分层职责 & 依赖白名单
+  layer_rule:
+    deps_whitelist:
+      golang/biz/handle: ["golang/biz/logic", "golang/biz/convert", "golang/biz/dal"]
+      golang/biz/logic: ["golang/biz/convert", "golang/biz/dal"]
+      golang/biz/convert: []
+      golang/biz/dal: []
+    layer_constraint:
+      handle_allow_light_biz: true
+      handle_allow_cache_opt: true
+      handle_forbid_heavy_biz: true
+      handle_forbid_raw_sql: true
+      logic_forbid_depend_upper: true
+      convert_forbid_biz_logic: true
+  
+  # DAL层强制规范
+  dal:
+    db_init_file: "golang/biz/dal/gormL/init.go"
+    multi_db_isolate: true
+    where:
+      enable: true
+      forbid_raw_sql: true
+      only_from_repo_get: true
+    repo:
+      forbid_global_singleton: true
+      must_new_instance: true
+      must_implement_get_where: true
+    page:
+      limit_plus_one: true
+      auto_calc_has_more: true
+      auto_clip_list: true
+      page_struct: "widget.Page"
+  
+  # 脚手架生成规范
+  hz_scaffold:
+    proto_mode: true
+    forbid_manual_write_router: true
+    forbid_manual_write_model: true
+    update_by_proto_only: true
+  
+  # 全局红线禁止规则
+  forbidden_rule:
+    - "禁止logic层反向依赖handle上层模块，禁止循环依赖"
+    - "禁止convert层编写任何业务判断、数据处理、流程逻辑"
+    - "禁止handle层编写可复用重型通用业务逻辑，必须下沉logic"
+    - "禁止手动new实例化Where结构体，必须通过Repo.GetWhere()获取"
+    - "禁止手写裸SQL，全部使用where链式构造器查询"
+    - "禁止Repo全局单例，每次使用必须新建实例"
+    - "禁止conf目录存放Go源码文件，仅允许yaml配置"
+    - "禁止手动修改router、model脚手架自动生成代码"
+    - "禁止业务硬编码常量、状态、时间、ID等固定数据"
+    - "禁止render目录层级混乱，必须严格两层结构：一级业务模块/二级子页面"
 
-# ====================== 2. 全局编码规范 ======================
-code_rule:
-  comment_rule: "single_line"
-  string_backtick: true
-  infinite_for: true
-  struct_aggregate_init: true
-  auto_type_infer: true
-  forbid_var_shadow: true
-  forbid_global_biz_var: true
-  lint_nolint_allow: true
-
-# ====================== 3. 工程目录结构约束 ======================
-dir_struct:
-  root_keep:
-    - idl
-    - layout
-    - conf
-    - golang
-    - render
-  biz_path: "golang/biz"
-  biz_sub_dir:
-    - handle
-    - model
-    - router
-    - mw
-    - logic
-    - convert
-    - dal
-
-# ====================== 4. 目录专属强约束 ======================
-dir_rule:
-  conf:
-    only_yaml: true
-    forbid_go_file: true
-  idl:
-    only_protobuf: true
-  golang/biz/router:
-    manual_edit_forbid: true
-  golang/biz/model:
-    manual_edit_forbid: true
-  render:
-    only_html_asset: true
-    forbid_go_file: true
-    # 强制两层结构：一级业务模块 / 二级子页面
-    layer_limit: 2
-    forbid_flat_root_html: true
-    forbid_multi_layer_nest: true
-
-# ====================== 5. 分层职责 & 依赖白名单 ======================
-layer_rule:
-  # 单向依赖：只允许从上到下，禁止反向/循环依赖
-  deps_whitelist:
-    golang/biz/handle: ["golang/biz/logic", "golang/biz/convert", "golang/biz/dal"]
-    golang/biz/logic: ["golang/biz/convert", "golang/biz/dal"]
-    golang/biz/convert: []
-    golang/biz/dal: []
-  layer_constraint:
-    # handle层：允许轻量业务、缓存，禁止重型通用业务
-    handle_allow_light_biz: true
-    handle_allow_cache_opt: true
-    handle_forbid_heavy_biz: true
-    handle_forbid_raw_sql: true
-    # logic层：纯通用复用业务，禁止依赖上层
-    logic_forbid_depend_upper: true
-    # convert层：只做模型转换，禁止业务逻辑
-    convert_forbid_biz_logic: true
-
-# ====================== 6. DAL 层强制规范（与RPC完全对齐） ======================
-dal:
-  db_init_file: "golang/biz/dal/gormL/init.go"
-  multi_db_isolate: true
- # Where查询构造器规范
-  where:
-    enable: true
-    forbid_raw_sql: true
-    # 唯一入口：禁止手动new，只能Repo.GetWhere()
-    only_from_repo_get: true
-  # Repo仓储规范
-  repo:
-    forbid_global_singleton: true
-    must_new_instance: true
-    must_implement_get_where: true
-  # 统一分页规范
-  page:
-    limit_plus_one: true
-    auto_calc_has_more: true
-    auto_clip_list: true
-    page_struct: "widget.Page"
-
-# ====================== 7. 脚手架生成规范 ======================
-hz_scaffold:
-  proto_mode: true
-  forbid_manual_write_router: true
-  forbid_manual_write_model: true
-  update_by_proto_only: true
-
-# ====================== 8. 全局红线禁止规则 ======================
-forbidden_rule:
-  - "禁止logic层反向依赖handle上层模块，禁止循环依赖"
-  - "禁止convert层编写任何业务判断、数据处理、流程逻辑"
-  - "禁止handle层编写可复用重型通用业务逻辑，必须下沉logic"
-  - "禁止手动new实例化Where结构体，必须通过Repo.GetWhere()获取"
-  - "禁止手写裸SQL，全部使用where链式构造器查询"
-  - "禁止Repo全局单例，每次使用必须新建实例"
-  - "禁止conf目录存放Go源码文件，仅允许yaml配置"
-  - "禁止手动修改router、model脚手架自动生成代码"
-  - "禁止业务硬编码常量、状态、时间、ID等固定数据"
-  - "禁止render目录层级混乱，必须严格两层结构：一级业务模块/二级子页面"
+# 绑定当前使用的AI工具
+tools:
+  - name: "Claude Code"

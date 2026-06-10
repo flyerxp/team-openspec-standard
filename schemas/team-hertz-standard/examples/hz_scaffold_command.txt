@@ -1,0 +1,5 @@
+# Hertz Protobuf脚手架标准生成命令（项目固定模板）
+# 使用说明：替换最后一个参数为你的目标proto文件路径即可
+# 示例：hz update --mod=github.com/flyerxp/manage/v2 --proto_path=idl --idl=idl/shop/shop.proto  --customize_package=layout/package.yaml
+
+hz update --mod=github.com/flyerxp/manage/v2 --proto_path=idl --idl=idl/目标文件.proto  --customize_package=layout/package.yaml

@@ -1,92 +1,124 @@
-project:
-  name: "async-task-service"
+# OpenSpec 1.4.1 新版配置文件（异步任务服务专属：Crontab+Consumer）
+version: "1.0"
+no_interactive: true
+
+context:
+  # 项目基础信息
+  project: "async-task-service"
   display_name: "Golang异步任务服务"
   service_type: ["crontab", "consumer"]
   description: "基于Cobra+GORM+Redis+MQ构建的定时任务、消息消费异步后台服务"
-  tech_stack: ["Golang", "GORM", "Redis", "Cobra", "MQ"]
-  spec_version: "v1.0"
-  align_spec: "Kitex_RPC_Standard"
-  language: "zh-CN"
-  comment_rule: "single_line"
-  string_rule: "backtick"
-  loop_rule: "infinite_for"
-  struct_init_rule: "aggregate"
-  variable_rule: "auto_infer"
-  shadow_variable: "disable"
+  tech_stack: ["Golang 1.21+", "GORM v2", "Redis 6.0+", "Cobra", "MQ"]
+  
+  # 关联代码示例文件（AI自动读取参考）
+  examples:
+    - path: "openspec/examples/where_constructor_example.go"
+      description: "Where链式查询构造器标准写法，类型安全禁止裸SQL"
+    - path: "openspec/examples/repo_page_example.go"
+      description: "Repo仓储层+统一分页完整实现，包含CRUD、更新方法选型"
+    - path: "openspec/examples/transaction_example.go"
+      description: "GORM两种事务标准写法，手动/自动事务两种模式"
+    - path: "openspec/examples/db_init_example.go"
+      description: "多数据库统一初始化init.go模板，全局唯一DB入口"
+  
+  # 工程目录结构约束
+  dir_struct:
+    root_keep:
+      - biz
+      - crontab
+      - consumer
+    biz_sub_dir:
+      - logic
+      - convert
+      - dal/gormL
+      - dal/redis
+    crontab_sub_dir:
+      - cmd
+      - service
+      - conf
+      - shell
+    consumer_sub_dir:
+      - cmd
+      - service
+      - conf
+      - shell
+  
+  # 目录专属强约束（已添加你要的where目录规则）
+  dir_rule:
+    conf:
+      only_yaml: true
+      forbid_go_file: true
+    # 新增：gormL目录自动创建多库子目录
+    biz/dal/gormL:
+      auto_create_sub_db_dir: true
+    # 新增：所有业务库下的where目录约束
+    biz/dal/gormL/*/where:
+      only_go_file: true
+      forbid_other_file: true
+    # 原有规则
+    biz/dal/redis:
+      only_go_file: true
+      forbid_other_file: true
+    crontab/cmd:
+      forbid_biz_logic: true
+    consumer/cmd:
+      forbid_biz_logic: true
+  
+  # DAL层全局规范
+  dal:
+    db_mode: "multi_db_isolate"
+    init_file: "biz/dal/gormL/init.go"
+    where:
+      enable: true
+      base_struct: "gormL.BaseWhere"
+      file_naming: "table_name_lower"
+      struct_naming: "table_camel+ListWhere"
+      private_method: true
+      raw_sql: false
+    repo:
+      singleton: false
+      must_get_where: true
+      new_instance: true
+    page:
+      limit_offset_mode: true
+      limit_plus_one: true
+      auto_has_more: true
+      auto_clip_list: true
+      page_struct: "widget.Page"
+  
+  # 分层依赖白名单
+  deps_whitelist:
+    crontab/cmd: ["crontab/service"]
+    consumer/cmd: ["consumer/service"]
+    crontab/service: ["biz/logic", "biz/dal", "biz/convert"]
+    consumer/service: ["biz/logic", "biz/dal", "biz/convert"]
+    biz/logic: ["biz/dal(readonly)", "biz/convert"]
+  
+  # 分层职责约束
+  layer_constraint:
+    cmd_no_biz_logic: true
+    convert_no_logic: true
+    logic_no_upper_depend: true
+    dal_no_hard_code: true
+  
+  # 编码强制规则
+  code_rule:
+    global_biz_var: false
+    var_shadow: false
+    lint_nolint: true
+    cobra_standard: true
+    service_cmd_match: true
+  
+  # 全局红线禁止规则
+  forbidden_rule:
+    - "禁止Logic依赖上层crontab/consumer模块"
+    - "禁止cmd层编写任何业务、数据逻辑"
+    - "禁止Convert层编写业务逻辑"
+    - "禁止Repo全局单例"
+    - "禁止硬编码配置、时间、状态值"
+    - "禁止手写裸SQL"
+    - "禁止跨层、反向非法依赖"
 
-# 工程目录固定配置（强制对齐project.md规范）
-dir_struct:
-  biz:
-    - "biz/logic"
-    - "biz/convert"
-    - "biz/dal/gormL"
-    - "biz/dal/redis"
-  crontab:
-    - "crontab/cmd"
-    - "crontab/service"
-    - "crontab/conf"
-    - "crontab/shell"
-  consumer:
-    - "consumer/cmd"
-    - "consumer/service"
-    - "consumer/conf"
-    - "consumer/shell"
-
-# DAL层全局规范配置
-dal:
-  # 数据库多库隔离配置
-  db_mode: "multi_db_isolate"
-  init_file: "biz/dal/gormL/init.go"
-  # 查询构造器规则
-  where:
-    enable: true
-    base_struct: "gormL.BaseWhere"
-    file_naming: "table_name_lower"
-    struct_naming: "table_camel+ListWhere"
-    private_method: true
-    raw_sql: false
-  # Repo仓储规则
-  repo:
-    singleton: false
-    must_get_where: true
-    new_instance: true
-  # 分页全局统一规则
-  page:
-    limit_offset_mode: true
-    limit_plus_one: true
-    auto_has_more: true
-    auto_clip_list: true
-    page_struct: "widget.Page"
-
-# 分层依赖白名单（强制）
-deps_whitelist:
-  crontab/cmd: ["crontab/service"]
- consumer/cmd: ["consumer/service"]
-  crontab/service: ["biz/logic", "biz/dal", "biz/convert"]
- consumer/service: ["biz/logic", "biz/dal", "biz/convert"]
-  biz/logic: ["biz/dal(readonly)", "biz/convert"]
-
-# 分层职责约束
-layer_constraint:
-  cmd_no_biz_logic: true
-  convert_no_logic: true
-  logic_no_upper_depend: true
-  dal_no_hard_code: true
-
-# 编码强制规则
-code_rule:
-  global_biz_var: false
-  var_shadow: false
-  lint_nolint: true
-  cobra_standard: true
-  service_cmd_match: true
-
-# 全局禁止红线
-forbidden_rule:
-  - "禁止Logic依赖上层crontab/consumer模块"
-  - "禁止cmd层编写任何业务、数据逻辑"
-  - "禁止Convert层编写业务逻辑"
-  - "禁止Repo全局单例"
-  - "禁止硬编码配置、时间、状态值"
-  - "禁止手写裸SQL"
-  - "禁止跨层、反向非法依赖"
+# 绑定当前使用的AI工具
+tools:
+  - name: "Claude Code"

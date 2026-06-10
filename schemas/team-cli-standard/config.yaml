@@ -121,4 +121,4 @@ context:
 
 # 绑定当前使用的AI工具
 tools:
-  - name: "Claude Code"
+  - name: "Qoder"

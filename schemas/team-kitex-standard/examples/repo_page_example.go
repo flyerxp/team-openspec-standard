@@ -16,8 +16,6 @@ type DemoInfo struct {
 	Status int    `gorm:"column:status"`
 	Path   string `gorm:"column:path;size:255"`
 	RootId int    `gorm:"column:root_id"`
-	//有join需求则有这种，否则没有
-	Price []DemoInfoPrice `gorm:"foreignKey:StrategyId;references:RootId"`
 }
 
 // TableName 指定数据库表名

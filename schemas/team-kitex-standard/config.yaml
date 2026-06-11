@@ -46,7 +46,6 @@ context:
       lint_nolint_support: true
     
     # 目录结构规范
-    # 目录结构规范
     directory:
       root_dirs: ["idl", "kitex_gen", "layout", "conf", "biz"]
       biz_sub_dirs: ["service", "logic", "convert", "dal/gormL", "dal/redis"]
@@ -63,6 +62,14 @@ context:
           auto_create_sub_db_dir: true
         # 所有业务库下 where 目录约束
         biz/dal/gormL/*/where:
+          only_allow_go: true
+          forbid_other_file: true
+        # 新增：所有业务库下 顶层joins目录约束
+        biz/dal/gormL/*/joins:
+          only_allow_go: true
+          forbid_other_file: true
+        # 新增：joins内部子where目录约束，和单表where规则完全对齐
+        biz/dal/gormL/*/joins/where:
           only_allow_go: true
           forbid_other_file: true
     # 分层职责约束

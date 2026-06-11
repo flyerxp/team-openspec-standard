@@ -62,6 +62,14 @@ context:
     biz/dal/gormL/*/where:
       only_go_file: true
       forbid_other_file: true
+    # 新增：所有业务库下 顶层joins目录约束
+    biz/dal/gormL/*/joins:
+      only_allow_go: true
+      forbid_other_file: true
+    # 新增：joins内部子where目录约束，和单表where规则完全对齐
+    biz/dal/gormL/*/joins/where:
+      only_allow_go: true
+      forbid_other_file: true
     # 原有规则
     biz/dal/redis:
       only_go_file: true

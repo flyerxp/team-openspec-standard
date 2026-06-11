@@ -136,6 +136,7 @@ context:
         - 禁止Preload用于常规跨表关联，仅允许一对一嵌套返回边缘场景使用
         - Where层禁止结构体属性入参，统一使用链式方法返回自身
         - 禁止exists模拟内连接，内外连接统一通过db.Joins原生语法切换
+        - 禁止无参数裸调用 db.Distinct()，禁止使用 `表名.*` 作为Distinct参数
       column_spec:
         syntax: "`table_name`.`column_name`"
         duplicate_alias_rule: "关联表同名字段统一别名: 关联表短前缀_字段名，例demo_info_price.id => price_id"
@@ -147,7 +148,7 @@ context:
         sql_type: "统一单SQL db.Joins，不使用双SQL预加载"
         join_type: "LEFT JOIN/INNER JOIN直接通过Joins入参切换，无需额外兜底逻辑"
         dto_style: "优先使用嵌套子DTO（主表/关联表字段语义隔离），简单查询可使用字段平铺，禁止混用两种风格"
-        one_to_many_rule: "一对多Joins查询必须添加Distinct(`主表.*`)去重，避免主表数据重复"
+        one_to_many_rule: "一对多Joins查询仅允许 Distinct(`主表.主键`) 索引级去重，禁止.*、禁止裸Distinct"
     repo_extend:
       alias_standard: null
       mandatory_method:

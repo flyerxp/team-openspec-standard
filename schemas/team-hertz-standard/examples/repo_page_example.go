@@ -16,6 +16,8 @@ type DemoInfo struct {
 	Status int    `gorm:"column:status"`
 	Path   string `gorm:"column:path;size:255"`
 	RootId int    `gorm:"column:root_id"`
+	//有join需求则有这种，否则没有
+	Price []DemoInfoPrice `gorm:"foreignKey:StrategyId;references:RootId"`
 }
 
 // TableName 指定数据库表名
@@ -77,7 +79,7 @@ func (r *DemoRepo) ListPage(ctx context.Context, w *where.DemoListWhere, page, l
 	}
 	// 排序
 	db = db.Order("id desc")
-	// limit+1 查询，精准判断是否有下一页
+	// limit+1 查询，用于精准判断是否有下一页
 	offset := (page - 1) * limit
 	db = db.Offset(offset).Limit(limit + 1)
 
@@ -88,7 +90,7 @@ func (r *DemoRepo) ListPage(ctx context.Context, w *where.DemoListWhere, page, l
 	return pageObj.DoPage(), nil
 }
 
-// UpdatePathById 普通更新：仅返回DB错误，不校验更新行数
+// UpdatePathById 普通更新方法：仅返回DB错误，不校验更新行数
 func (r *DemoRepo) UpdatePathById(ctx context.Context, id int, path string, rootId int, tx *gorm.DB) error {
 	db := r.getGormModel(ctx, tx)
 	return db.Where("id = ?", id).Updates(map[string]interface{}{
@@ -97,7 +99,7 @@ func (r *DemoRepo) UpdatePathById(ctx context.Context, id int, path string, root
 	}).Error
 }
 
-// UpdatePathByIdMust 强制更新：额外校验更新行数，确保数据存在
+// UpdatePathByIdMust 强制更新方法：额外校验更新行数，确保数据存在
 func (r *DemoRepo) UpdatePathByIdMust(ctx context.Context, id int, path string, rootId int, tx *gorm.DB) error {
 	db := r.getGormModel(ctx, tx)
 	result := db.Where("id = ?", id).Updates(map[string]interface{}{

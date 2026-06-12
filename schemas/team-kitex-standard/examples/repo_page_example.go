@@ -78,7 +78,7 @@ func (r *DemoRepo) ListPage(ctx context.Context, w *where.DemoListWhere, page, l
 	// 排序
 	db = db.Order("id desc")
 	// limit+1 查询，用于精准判断是否有下一页
-	offset := (page - 1) * limit
+	offset := pageObj.Page.GetStart()
 	db = db.Offset(offset).Limit(limit + 1)
 
 	if err := db.Find(&list).Error; err != nil {

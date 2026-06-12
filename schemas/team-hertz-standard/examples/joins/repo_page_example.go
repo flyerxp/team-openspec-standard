@@ -89,7 +89,7 @@ func (r *DemoInfoJoinRepo) ListJoinPage(ctx context.Context, w *where.DemoJoinWh
 	}
 	// 固定原生表名排序，禁止简写
 	db = db.Order("`demo_info`.`id` DESC")
-	offset := (page - 1) * limit
+	offset := pageObj.Page.GetStart()
 	// 多查一条用于判断是否还有下一页
 	db = db.Offset(offset).Limit(limit + 1)
 

@@ -104,7 +104,7 @@ func (r *DemoInfoJoinRepo) ListPage(ctx context.Context, w *where.DemoJoinWhere,
 	// 排序必须携带原生表名，杜绝字段歧义
 	db = db.Order("`demo_info`.`id` DESC")
 	// limit+1分页判断更多
-	offset := (page - 1) * limit
+	offset := pageObj.Page.GetStart()
 	db = db.Offset(offset).Limit(limit + 1)
 
 	if err := db.Find(&list).Error; err != nil {
